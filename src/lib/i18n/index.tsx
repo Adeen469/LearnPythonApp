@@ -29,7 +29,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Localization from "expo-localization";
 import { en } from "./en";
 import { hiRoman } from "./hi-roman";
-import { urRoman } from "./ur-roman";
 import { fr } from "./fr";
 import { ja } from "./ja";
 import { ko } from "./ko";
@@ -40,7 +39,6 @@ import { ru } from "./ru";
 import { ar } from "./ar";
 import { zh } from "./zh";
 import { titles as titlesHiRoman } from "./titles/hi-roman";
-import { titles as titlesUrRoman } from "./titles/ur-roman";
 import { titles as titlesFr } from "./titles/fr";
 import { titles as titlesJa } from "./titles/ja";
 import { titles as titlesKo } from "./titles/ko";
@@ -54,7 +52,6 @@ import { titles as titlesZh } from "./titles/zh";
 export type LanguageCode =
   | "en"
   | "hi-roman"
-  | "ur-roman"
   | "fr"
   | "ja"
   | "ko"
@@ -76,7 +73,6 @@ export interface LanguageInfo {
 export const LANGUAGES: LanguageInfo[] = [
   { code: "en", label: "English", englishName: "English" },
   { code: "hi-roman", label: "Hinglish (Roman)", englishName: "Roman Hindi (Hinglish)" },
-  { code: "ur-roman", label: "Urdu (Roman)", englishName: "Roman Urdu" },
   { code: "fr", label: "Français", englishName: "French" },
   { code: "ja", label: "日本語", englishName: "Japanese" },
   { code: "ko", label: "한국어", englishName: "Korean" },
@@ -321,7 +317,6 @@ export type TitlesMaps = {
 const STRINGS: Record<LanguageCode, Strings> = {
   en,
   "hi-roman": hiRoman,
-  "ur-roman": urRoman,
   fr,
   ja,
   ko,
@@ -342,7 +337,6 @@ const EMPTY_TITLES: TitlesMaps = {
 const TITLES: Record<LanguageCode, TitlesMaps> = {
   en: EMPTY_TITLES,
   "hi-roman": titlesHiRoman,
-  "ur-roman": titlesUrRoman,
   fr: titlesFr,
   ja: titlesJa,
   ko: titlesKo,

@@ -3,7 +3,6 @@
 // and every lookup falls back to the English tutorial.
 
 import { TRANSLATIONS as hiRoman } from "./hi-roman";
-import { TRANSLATIONS as urRoman } from "./ur-roman";
 import { TRANSLATIONS as fr } from "./fr";
 import { TRANSLATIONS as ja } from "./ja";
 import { TRANSLATIONS as ko } from "./ko";
@@ -18,7 +17,6 @@ import type { LanguageCode } from "../i18n";
 
 const OVERLAYS: Record<Exclude<LanguageCode, "en">, TutorialTranslations> = {
   "hi-roman": hiRoman,
-  "ur-roman": urRoman,
   "fr": fr,
   "ja": ja,
   "ko": ko,
