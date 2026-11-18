@@ -14,6 +14,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "../lib/theme-context";
 import { useAuth } from "../lib/auth";
+import UpdateDialog from "../components/UpdateDialog";
+import {
+  checkForUpdate,
+  type UpdateInfo,
+} from "../lib/updates";
 import {
   emptyProgress,
   loadProgress,
@@ -28,6 +33,21 @@ export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const [progress, setProgress] = useState<ProgressState>(emptyProgress);
   const [signingOut, setSigningOut] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<
+    "idle" | "checking" | "uptodate" | "unavailable"
+  >("idle");
+  const [manualUpdate, setManualUpdate] = useState<UpdateInfo | null>(null);
+
+  async function handleCheckForUpdates() {
+    setUpdateStatus("checking");
+    const result = await checkForUpdate();
+    if (result.status === "update") {
+      setManualUpdate(result.info);
+      setUpdateStatus("idle");
+    } else {
+      setUpdateStatus(result.status);
+    }
+  }
 
   useEffect(() => {
     loadProgress().then(setProgress);
@@ -159,6 +179,47 @@ export default function SettingsScreen() {
         </Text>
       </View>
 
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>Updates</Text>
+      <View style={[styles.card, { borderColor: theme.border }]}>
+        <View style={styles.row}>
+          <Ionicons name="cloud-download-outline" size={20} color={theme.textSecondary} />
+          <Text style={[styles.rowLabel, { color: theme.text }]}>
+            App updates
+          </Text>
+        </View>
+        <Text style={[styles.body, { color: theme.textMuted }]}>
+          New versions arrive as GitHub releases. The app checks on
+          launch; you can check here too.
+        </Text>
+        <Pressable
+          style={[
+            styles.checkButton,
+            { borderColor: theme.border },
+            updateStatus === "checking" && styles.disabled,
+          ]}
+          onPress={handleCheckForUpdates}
+          disabled={updateStatus === "checking"}
+        >
+          {updateStatus === "checking" ? (
+            <ActivityIndicator color={theme.text} />
+          ) : (
+            <Text style={[styles.checkButtonText, { color: theme.text }]}>
+              Check for updates
+            </Text>
+          )}
+        </Pressable>
+        {updateStatus === "uptodate" ? (
+          <Text style={[styles.hint, { color: theme.textMuted }]}>
+            You&apos;re up to date.
+          </Text>
+        ) : null}
+        {updateStatus === "unavailable" ? (
+          <Text style={[styles.hint, { color: theme.textMuted }]}>
+            Couldn&apos;t check for updates — try again later.
+          </Text>
+        ) : null}
+      </View>
+
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Account</Text>
       {user ? (
         <Pressable
@@ -194,6 +255,13 @@ export default function SettingsScreen() {
       <Text style={[styles.version, { color: theme.textMuted }]}>
         Learn Python · version {version}
       </Text>
+
+      {manualUpdate ? (
+        <UpdateDialog
+          info={manualUpdate}
+          onClose={() => setManualUpdate(null)}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -283,6 +351,17 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 16,
+    fontWeight: "600",
+  },
+  checkButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 14,
+  },
+  checkButtonText: {
+    fontSize: 15,
     fontWeight: "600",
   },
   disabled: {

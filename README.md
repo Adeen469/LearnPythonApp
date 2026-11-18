@@ -25,7 +25,11 @@ npm install
 npx expo start
 ```
 
-Scan the QR code with Expo Go, or press `a` for an Android emulator. For a standalone APK, build with EAS Build (`eas build -p android`) — the Android package is `com.learnpython.app` and the deep-link scheme is `learnpython`.
+Scan the QR code with Expo Go, or press `a` for an Android emulator. For a standalone APK, build with EAS Build (`npx eas-cli@latest build -p android`) — the Android package is `com.learnpython.app` and the deep-link scheme is `learnpython`.
+
+## Updates
+
+When a new version is released on GitHub, the app shows an "Update available" dialog with the release notes, and downloads the new APK inside the app. To ship an update: bump `version` in `app.json`, build the APK (`npx eas-cli@latest build -p android`), create a GitHub Release tagged like `v1.1.0`, attach the APK, and write the changes in the release notes. Put `[mandatory]` in the release title to force the update — the app blocks until it is installed.
 
 ## Backend notes
 

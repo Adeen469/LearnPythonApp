@@ -125,5 +125,41 @@ don't hand-roll fetch calls).
   `expo-file-system` `File`/`Directory`/`Paths` API are already
   verified against the v58 docs.
 - `npx tsc --noEmit` and `npx expo export` must pass before the
-  work is called done. Nothing is pushed until Maalik says so —
-  the whole app goes in ONE push at the end.
+  work is called done. Nothing is pushed until Maalik says so.
+
+## App updates (in-app, GitHub Releases)
+
+No backend involved — the app talks to GitHub's public API directly.
+`src/lib/updates.ts` is the whole mechanism; `src/components/UpdateGate.tsx`
+checks once on launch, `src/components/UpdateDialog.tsx` is the dialog,
+and Settings has a manual "Check for updates" row.
+
+- Source: `GET https://api.github.com/repos/Adeen469/LearnPythonApp/releases/latest`.
+- A release counts as an update when its tag (without a leading "v") is a
+  newer dotted version than `Constants.expoConfig.version` (from app.json).
+  Version compare is numeric per segment ("1.10.0" > "1.9.0").
+- Details shown in the dialog are the release notes (body). The dialog
+  shows version + APK size (from the release asset).
+- Mandatory: put `[mandatory]` in the release title or body. Mandatory
+  updates cannot be dismissed and block the app until installed.
+  Optional updates dismissed with "Later" are remembered per tag in
+  AsyncStorage (`lp_update_dismissed`); a newer tag shows again.
+- "Update" downloads the release's `.apk` (new expo-file-system
+  `File.createDownloadTask`, progress bar in the dialog) to the cache,
+  then opens the Android installer via `expo-intent-launcher`
+  (`ACTION_VIEW`, type `application/vnd.android.package-archive`,
+  `FLAG_GRANT_READ_URI_PERMISSION`). The installer needs a content://
+  URI — only the legacy file-system API exposes `getContentUriAsync`,
+  so that one call imports from `expo-file-system/legacy`.
+- First install from the app: Android asks to allow "Install unknown
+  apps" for Learn Python. That needs `REQUEST_INSTALL_PACKAGES` in
+  app.json (already set). If the install intent fails, the dialog
+  offers "Allow installs in settings" (MANAGE_UNKNOWN_APP_SOURCES).
+- Android only — the check is skipped on iOS (no APK to install).
+- Silent failures: offline, no releases yet (404), or a failed request
+  all mean "no update" and never interrupt the app. Manual check in
+  Settings reports "Couldn't check for updates" instead.
+- Shipping an update: bump `version` in app.json, build the APK with
+  EAS, create a GitHub Release tagged e.g. `v1.1.0`, attach the .apk,
+  write the changes in the release notes. The tag must be higher than
+  the version users already have installed.

@@ -5,6 +5,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "../lib/auth";
 import { ThemeProvider, useTheme } from "../lib/theme-context";
+import UpdateGate from "../components/UpdateGate";
 
 function RootStack() {
   const { theme, name } = useTheme();
@@ -56,6 +57,10 @@ function RootStack() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
+      {/* Checks for app updates on launch; renders nothing unless a
+          newer release exists. Outside the Suspense boundary so it can
+          show even while the session check is still running. */}
+      <UpdateGate />
       {/* The AuthProvider suspends while the first session check runs;
           this fallback is the app's loading screen. */}
       <Suspense fallback={<LoadingFallback />}>
