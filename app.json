@@ -24,7 +24,8 @@
       "expo-web-browser",
       "expo-router",
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      "expo-localization"
     ],
     "scheme": "learnpython",
     "slug": "learn-python",

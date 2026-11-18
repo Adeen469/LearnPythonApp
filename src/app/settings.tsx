@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "../lib/theme-context";
 import { useAuth } from "../lib/auth";
+import { LANGUAGES, useLanguage } from "../lib/i18n";
 import UpdateDialog from "../components/UpdateDialog";
 import {
   checkForUpdate,
@@ -31,6 +32,7 @@ const GOAL_OPTIONS = [15, 30, 45, 60];
 export default function SettingsScreen() {
   const { theme, name, setName } = useTheme();
   const { user, signOut } = useAuth();
+  const { lang, setLang, t } = useLanguage();
   const [progress, setProgress] = useState<ProgressState>(emptyProgress);
   const [signingOut, setSigningOut] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<
@@ -81,11 +83,11 @@ export default function SettingsScreen() {
     >
       {user ? (
         <Text style={[styles.signedInAs, { color: theme.textMuted }]}>
-          Signed in as {user.email}
+          {t.settings.signedInAs(user.email)}
         </Text>
       ) : null}
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Appearance</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.appearance}</Text>
       <View style={[styles.card, { borderColor: theme.border }]}>
         <View style={styles.row}>
           <Ionicons
@@ -93,7 +95,7 @@ export default function SettingsScreen() {
             size={20}
             color={theme.textSecondary}
           />
-          <Text style={[styles.rowLabel, { color: theme.text }]}>Theme</Text>
+          <Text style={[styles.rowLabel, { color: theme.text }]}>{t.settings.theme}</Text>
         </View>
         <View style={styles.segmented}>
           {(["dark", "light"] as const).map((option) => {
@@ -116,21 +118,55 @@ export default function SettingsScreen() {
                     { color: active ? theme.background : theme.textSecondary },
                   ]}
                 >
-                  {option === "dark" ? "Dark" : "Light"}
+                  {option === "dark" ? t.settings.themeDark : t.settings.themeLight}
                 </Text>
               </Pressable>
             );
           })}
         </View>
         <Text style={[styles.hint, { color: theme.textMuted }]}>
-          Dark is the default.
+          {t.settings.darkIsDefault}
         </Text>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Daily goal</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        {t.settings.language}
+      </Text>
+      <View style={[styles.card, { borderColor: theme.border }]}>
+        {LANGUAGES.map((l) => {
+          const active = lang === l.code;
+          return (
+            <Pressable
+              key={l.code}
+              style={[
+                styles.langRow,
+                active && { backgroundColor: theme.surface2 },
+              ]}
+              onPress={() => setLang(l.code)}
+            >
+              <View>
+                <Text style={[styles.langLabel, { color: theme.text }]}>
+                  {l.label}
+                </Text>
+                <Text style={[styles.langSub, { color: theme.textMuted }]}>
+                  {l.englishName}
+                </Text>
+              </View>
+              {active ? (
+                <Ionicons name="checkmark" size={20} color={theme.text} />
+              ) : null}
+            </Pressable>
+          );
+        })}
+        <Text style={[styles.hint, { color: theme.textMuted }]}>
+          {t.settings.languageHint}
+        </Text>
+      </View>
+
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.dailyGoal}</Text>
       <View style={[styles.card, { borderColor: theme.border }]}>
         <Text style={[styles.rowLabel, { color: theme.text }]}>
-          Minutes of learning per day
+          {t.settings.minutesPerDay}
         </Text>
         <View style={styles.goalRow}>
           {GOAL_OPTIONS.map((minutes) => {
@@ -153,7 +189,7 @@ export default function SettingsScreen() {
                     { color: active ? theme.background : theme.text },
                   ]}
                 >
-                  {minutes} min
+                  {t.settings.goalMinutes(minutes)}
                 </Text>
               </Pressable>
             );
@@ -161,35 +197,32 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Streak</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.streak}</Text>
       <View style={[styles.card, { borderColor: theme.border }]}>
         <View style={styles.row}>
           <Ionicons name="flame-outline" size={20} color={theme.warning} />
           <Text style={[styles.rowLabel, { color: theme.text }]}>
-            {progress.streakCount} day streak
+            {t.settings.streakCount(progress.streakCount)}
           </Text>
         </View>
         <Text style={[styles.body, { color: theme.textMuted }]}>
-          A day counts when you complete or watch a lesson. If your
-          streak breaks, you can restore it within 24 hours — up to 3
-          times a month.
+          {t.settings.streakExplainer}
         </Text>
         <Text style={[styles.body, { color: theme.textMuted }]}>
-          Restores left this month: {restoresLeft} of 3.
+          {t.settings.restoresLeft(restoresLeft)}
         </Text>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Updates</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.updates}</Text>
       <View style={[styles.card, { borderColor: theme.border }]}>
         <View style={styles.row}>
           <Ionicons name="cloud-download-outline" size={20} color={theme.textSecondary} />
           <Text style={[styles.rowLabel, { color: theme.text }]}>
-            App updates
+            {t.settings.appUpdates}
           </Text>
         </View>
         <Text style={[styles.body, { color: theme.textMuted }]}>
-          New versions arrive as GitHub releases. The app checks on
-          launch; you can check here too.
+          {t.settings.updatesExplainer}
         </Text>
         <Pressable
           style={[
@@ -204,23 +237,23 @@ export default function SettingsScreen() {
             <ActivityIndicator color={theme.text} />
           ) : (
             <Text style={[styles.checkButtonText, { color: theme.text }]}>
-              Check for updates
+              {t.settings.checkForUpdates}
             </Text>
           )}
         </Pressable>
         {updateStatus === "uptodate" ? (
           <Text style={[styles.hint, { color: theme.textMuted }]}>
-            You&apos;re up to date.
+            {t.settings.upToDate}
           </Text>
         ) : null}
         {updateStatus === "unavailable" ? (
           <Text style={[styles.hint, { color: theme.textMuted }]}>
-            Couldn&apos;t check for updates — try again later.
+            {t.settings.couldntCheckUpdates}
           </Text>
         ) : null}
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Account</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.account}</Text>
       {user ? (
         <Pressable
           style={[
@@ -237,7 +270,7 @@ export default function SettingsScreen() {
             <>
               <Ionicons name="log-out-outline" size={20} color={theme.danger} />
               <Text style={[styles.signOutText, { color: theme.danger }]}>
-                Sign out
+                {t.common.signOut}
               </Text>
             </>
           )}
@@ -248,12 +281,12 @@ export default function SettingsScreen() {
           onPress={() => router.push("/auth/signin")}
         >
           <Ionicons name="log-in-outline" size={20} color={theme.text} />
-          <Text style={[styles.signOutText, { color: theme.text }]}>Sign in</Text>
+          <Text style={[styles.signOutText, { color: theme.text }]}>{t.common.signIn}</Text>
         </Pressable>
       )}
 
       <Text style={[styles.version, { color: theme.textMuted }]}>
-        Learn Python · version {version}
+        {t.settings.appVersion(version)}
       </Text>
 
       {manualUpdate ? (
@@ -363,6 +396,22 @@ const styles = StyleSheet.create({
   checkButtonText: {
     fontSize: 15,
     fontWeight: "600",
+  },
+  langRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  langLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  langSub: {
+    fontSize: 13,
+    marginTop: 2,
   },
   disabled: {
     opacity: 0.5,

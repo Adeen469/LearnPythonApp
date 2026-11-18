@@ -8,6 +8,7 @@
 // Never log the session value.
 
 import * as SecureStore from "expo-secure-store";
+import { getCurrentStrings } from "./i18n";
 import type { AiTutorResponse, Lesson, SessionUser } from "./types";
 
 export const API_BASE = "https://learnpythonprogram.vercel.app";
@@ -109,7 +110,7 @@ export async function apiJson<T>(
     const message =
       typeof data.error === "string"
         ? data.error
-        : `Request failed (${res.status})`;
+        : getCurrentStrings().common.requestFailed(res.status);
     const err = new Error(message) as Error & { status: number };
     err.status = res.status;
     throw err;

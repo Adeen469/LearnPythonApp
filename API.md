@@ -53,9 +53,12 @@ don't hand-roll fetch calls).
   `/api/video/[lessonId]` (Range/206 stream, MEGA or Drive).
   Use `expo-video` (`useVideoPlayer` + `VideoView`, SDK 58 docs
   already checked). Track watch percent; 95%+ watched = completed.
-- Notes are Markdown (`notes` field) — render simply (headings,
-  code blocks, lists); no heavy Markdown library is installed, keep
-  the renderer small and local to the lesson screen.
+- Notes: the API's `notes` field is just a YouTube link — it is ignored.
+  The written lesson shown below the video is the bundled tutorial (see
+  "Written lessons (tutorials)" under Languages): title, intro, blocks
+  (heading / para / code / list / note / tip), Summary + Practice, in the
+  user's language when a translation overlay exists, English otherwise.
+  A lesson with no mapped tutorial shows "No notes for this lesson yet."
 
 ## Courses — static data, bundled in the app
 
@@ -163,3 +166,112 @@ and Settings has a manual "Check for updates" row.
   EAS, create a GitHub Release tagged e.g. `v1.1.0`, attach the .apk,
   write the changes in the release notes. The tag must be higher than
   the version users already have installed.
+
+## Languages (i18n)
+
+The whole UI is translated into 12 languages. The videos themselves are
+not translated — everything visible around them is (screen titles, buttons,
+menus, labels, placeholders, errors, toasts, lesson titles, course video
+titles, roadmap stage/topic names).
+
+- Languages: English (`en`, default), Hinglish / Roman Hindi (`hi-roman`),
+  Roman Urdu (`ur-roman`), French (`fr`), Japanese (`ja`), Korean (`ko`),
+  Spanish (`es`), German (`de`), Portuguese — pt-BR (`pt`), Russian (`ru`),
+  Arabic (`ar`), Chinese Simplified (`zh`). The picker in Settings shows
+  each language's native name (e.g. "Français", "日本語", "한국어";
+  Roman Hindi is "Hinglish (Roman)", Roman Urdu is "Urdu (Roman)").
+- One file per language under `src/lib/i18n/` (`en.ts`, `hi-roman.ts`, …),
+  each exporting a complete `Strings` object. `src/lib/i18n/index.tsx`
+  defines the `Strings` type (English is the source of truth — every
+  language file is typed as `Strings`, so TypeScript errors if a key is
+  missing), the `LANGUAGES` list, a `LanguageProvider`, and a
+  `useLanguage()` hook returning `{ lang, setLang, t }`.
+- The choice persists in AsyncStorage (`lp_language`). Default: the
+  device locale (via `expo-localization`) if it matches a supported
+  language, else English. The provider is mounted in `src/app/_layout.tsx`
+  (inside `ThemeProvider`); Settings has a Language section — tapping a
+  language switches the whole app immediately.
+- Titles live apart from UI strings, in `src/lib/i18n/titles/<lang>.ts`:
+  `lessonTitle(id, fallback)` (keyed by lesson id, e.g.
+  `python-day-001`), `videoTitle(videoId, fallback)` (keyed by videoId),
+  `roadmapName(englishName)` (keyed by the English stage/topic name).
+  Titles maps may be partial — a missing entry falls back to the original
+  title. The main `Strings` object must stay complete in every language.
+- NOT translated: the videos themselves; creator names
+  (CodeWithHarry, Mosh, Apna College — proper names); AI tutor answers
+  (generated from English transcripts — tutor UI only); release notes in
+  the update dialog; server error messages passed through verbatim.
+- The Summary/Practice headings in the tutorial card
+  (`t.lesson.tutorialSummary` / `t.lesson.tutorialPractice`) are copied
+  verbatim from the website's `web/src/lib/i18n/<lang>.ts` — including
+  languages where the website still has them in English (fr/ja/ru) —
+  so web and app match exactly.
+
+### Written lessons (tutorials)
+
+The lesson detail screen shows the written lesson below the video —
+video first, then notes, same structure as the website's lesson page.
+The tutorials are bundled as static data (no runtime fetch — no API
+for them exists); the English text is a verbatim copy of the website's
+`web/src/lib/learn/*.ts`.
+
+- `src/lib/tutorials-data.ts` — English tutorials for the mapped slugs
+  only (46 of the website's 268). Generated, do not hand-edit.
+- `src/lib/lesson-tutorials.ts` — `LESSON_TO_TUTORIAL`: lesson id →
+  tutorial slug. 59/100 lessons mapped. Exercise / solution / shoutout
+  lessons have no tutorial (they practise, they don't teach); lessons
+  whose topic has no tutorial yet also have none. A lesson with no
+  entry shows the empty-notes text, never a wrong tutorial.
+- `src/lib/tutorials.ts` — `LearnTutorial` / `TutorialBlock` types,
+  `getTutorial(slug)`, `localizeTutorial(t, overlay)` (port of the
+  website's function: prose replaced from the overlay, code blocks
+  kept verbatim in English, missing fields fall back to English), and
+  `getLocalizedTutorial(slug, lang)`.
+- `src/lib/tutorials-i18n/<lang>.ts` — translation overlays, verbatim
+  copies of the website's `web/src/lib/learn/i18n/<lang>/*.ts`
+  (mapped slugs only). Coverage grows as the website finishes its
+  translation chunks — as of the last copy: fr 41/46, ko 39/46,
+  ja/de 38/46, zh 37/46, hi-roman/ur-roman/es/pt/ru/ar 35/46. The
+  still-missing overlays are all in the classes + file-handling
+  tutorials (e.g. `python-oop`, `python-classes`, `python-inheritance`,
+  `python-file-handling`, `python-file-open`) — the website hasn't
+  finished translating those chunks yet, so they render in English
+  until the overlays are re-copied (see "How to update" below).
+
+### How to update the tutorials
+
+1. Website adds/fixes a tutorial or a translation: re-run the
+   generators (`/tmp/lp-gen-data.mjs` for English,
+   `/tmp/lp-gen-i18n.mjs` for overlays) after updating
+   `src/lib/lesson-tutorials.ts` if the mapping changed. The
+   generators copy verbatim — never hand-edit the generated files and
+   never re-translate anything.
+2. New tutorial topic on the website that matches an unmapped lesson:
+   add the lesson → slug entry to `LESSON_TO_TUTORIAL`, re-run the
+   English generator, re-run the overlay generator.
+3. The Summary/Practice heading words come from the website's UI
+   strings (`web/src/lib/i18n/<lang>.ts`) — if the website changes
+   them, update `t.lesson.tutorialSummary` / `t.lesson.tutorialPractice`
+   in the app's `src/lib/i18n/<lang>.ts` files to match verbatim.
+- Arabic is translated as strings only — no RTL layout flipping in this
+  version (follow-up).
+
+### How to add a string
+
+1. Add the key to the `Strings` type in `src/lib/i18n/index.tsx` and to
+   `src/lib/i18n/en.ts` (English is the source of truth — the type and
+   the English object must stay in sync).
+2. Add the same key, translated, to all 11 other language files.
+3. Use it as `t.<section>.<key>` in the screen. `npx tsc --noEmit` fails
+   if any language file misses the key.
+
+### How to add a language
+
+1. Create `src/lib/i18n/<code>.ts` exporting a complete `Strings` object
+   (copy `en.ts` and translate every key).
+2. Create `src/lib/i18n/titles/<code>.ts` with the three title maps
+   (partial is fine — missing titles fall back to the original).
+3. Add `{ code, label, englishName }` to `LANGUAGES` in
+   `src/lib/i18n/index.tsx` and register the file in the language map
+   there. No screen changes needed — the Settings picker lists
+   `LANGUAGES` automatically.

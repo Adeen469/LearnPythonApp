@@ -18,6 +18,7 @@ import { WebView as RNWebView, type WebViewProps } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API_BASE } from "../../lib/api";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 
 // react-native-webview 14 types its component as WebView<P = undefined>,
 // and WebViewProps & undefined collapses to never, so every prop fails
@@ -31,6 +32,7 @@ const EDITOR_URL = `${API_BASE}/editor`;
 
 export default function EditorScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebViewInstance>(null);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -56,9 +58,9 @@ export default function EditorScreen() {
       ]}
     >
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Code Editor</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.editor.title}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Run Python right here — the website&apos;s editor, in the app.
+          {t.editor.subtitle}
         </Text>
       </View>
 
@@ -69,15 +71,14 @@ export default function EditorScreen() {
         ]}
       >
         <Text style={[styles.noticeText, { color: theme.textSecondary }]}>
-          Sign in again inside the editor to save your code to GitHub —
-          the editor keeps its own sign-in, separate from the app.
+          {t.editor.signInNotice}
         </Text>
         <Pressable
           onPress={() => webViewRef.current?.reload()}
           style={[styles.reloadButton, { borderColor: theme.border }]}
         >
           <Text style={[styles.reloadText, { color: theme.text }]}>
-            Reload editor
+            {t.editor.reload}
           </Text>
         </Pressable>
       </View>
@@ -95,7 +96,7 @@ export default function EditorScreen() {
           >
             <ActivityIndicator color={theme.text} />
             <Text style={{ color: theme.textMuted, marginTop: 8 }}>
-              Loading editor…
+              {t.editor.loading}
             </Text>
           </View>
         )}

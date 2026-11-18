@@ -5,10 +5,12 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "../lib/auth";
 import { ThemeProvider, useTheme } from "../lib/theme-context";
+import { LanguageProvider, useLanguage } from "../lib/i18n";
 import UpdateGate from "../components/UpdateGate";
 
 function RootStack() {
   const { theme, name } = useTheme();
+  const { t } = useLanguage();
   return (
     <>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
@@ -23,32 +25,32 @@ function RootStack() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="auth/signin"
-          options={{ title: "Sign in", presentation: "modal" }}
+          options={{ title: t.common.signIn, presentation: "modal" }}
         />
         <Stack.Screen
           name="auth/signup"
-          options={{ title: "Create account", presentation: "modal" }}
+          options={{ title: t.auth.createAccount, presentation: "modal" }}
         />
         <Stack.Screen
           name="auth/otp"
-          options={{ title: "Verify email", presentation: "modal" }}
+          options={{ title: t.nav.verifyEmail, presentation: "modal" }}
         />
         <Stack.Screen
           name="auth/forgot"
-          options={{ title: "Forgot password", presentation: "modal" }}
+          options={{ title: t.auth.forgotPasswordTitle, presentation: "modal" }}
         />
         <Stack.Screen
           name="auth/two-factor"
-          options={{ title: "Two-factor auth", presentation: "modal" }}
+          options={{ title: t.auth.twoFactorTitle, presentation: "modal" }}
         />
-        <Stack.Screen name="lesson/[id]" options={{ title: "Lesson" }} />
-        <Stack.Screen name="course/[slug]" options={{ title: "Course" }} />
+        <Stack.Screen name="lesson/[id]" options={{ title: t.nav.lesson }} />
+        <Stack.Screen name="course/[slug]" options={{ title: t.nav.course }} />
         <Stack.Screen
           name="tutor"
-          options={{ title: "AI Tutor", presentation: "modal" }}
+          options={{ title: t.common.aiTutor, presentation: "modal" }}
         />
-        <Stack.Screen name="settings" options={{ title: "Settings" }} />
-        <Stack.Screen name="roadmap" options={{ title: "Roadmap" }} />
+        <Stack.Screen name="settings" options={{ title: t.common.settings }} />
+        <Stack.Screen name="roadmap" options={{ title: t.common.roadmap }} />
       </Stack>
     </>
   );
@@ -57,6 +59,7 @@ function RootStack() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
+      <LanguageProvider>
       {/* Checks for app updates on launch; renders nothing unless a
           newer release exists. Outside the Suspense boundary so it can
           show even while the session check is still running. */}
@@ -68,6 +71,7 @@ export default function RootLayout() {
           <RootStack />
         </AuthProvider>
       </Suspense>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

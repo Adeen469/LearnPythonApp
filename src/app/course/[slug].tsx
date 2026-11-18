@@ -30,30 +30,11 @@ import {
   type ProgressState,
 } from "../../lib/progress";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 
 /** Progress key for a course video: the MEGA lesson id when it has one. */
 function videoKey(video: CourseVideo): string {
   return video.megaLessonId ?? video.videoId;
-}
-
-/** Seconds -> "11:50" or "11:52:24". Empty when unknown. */
-function formatHms(totalSeconds?: number): string {
-  if (totalSeconds == null) return "";
-  const s = Math.max(0, Math.floor(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const mm = String(m).padStart(2, "0");
-  const ss = String(sec).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
-}
-
-/** Seconds -> "12h 34m" (or "45m" under an hour). */
-function formatTotal(totalSeconds: number): string {
-  const totalMinutes = Math.floor(totalSeconds / 60);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 function playlistSeconds(playlist: CoursePlaylist): number {
@@ -130,11 +111,15 @@ function VideoRow({
   onSelect: (video: CourseVideo) => void;
 }) {
   const { theme } = useTheme();
+  const { t, videoTitle } = useLanguage();
   const key = videoKey(video);
   const pct = progress.watchPct[key] ?? 0;
   const completed =
     progress.completedLessonIds.includes(key) || pct >= 95;
-  const duration = formatHms(video.durationSeconds);
+  const duration =
+    video.durationSeconds == null
+      ? ""
+      : t.common.duration(video.durationSeconds);
 
   return (
     <Pressable
@@ -165,10 +150,15 @@ function VideoRow({
           style={[styles.videoRowTitle, { color: theme.text }]}
           numberOfLines={2}
         >
-          {index + 1}. {video.title}
+          {t.course.videoRowNumber(index + 1)}
+          {videoTitle(video.videoId, video.title)}
         </Text>
         <Text style={[styles.videoRowMeta, { color: theme.textMuted }]}>
-          {completed ? "Completed" : pct > 0 ? `Watched ${pct}%` : "Not started"}
+          {completed
+            ? t.common.completed
+            : pct > 0
+              ? t.common.watchedPct(pct)
+              : t.common.notStarted}
           {duration ? ` · ${duration}` : ""}
         </Text>
       </View>
@@ -182,6 +172,7 @@ function VideoRow({
 
 export default function CourseScreen() {
   const { theme } = useTheme();
+  const { t, videoTitle } = useLanguage();
   const { slug } = useLocalSearchParams<{ slug?: string | string[] }>();
   const slugValue = Array.isArray(slug) ? slug[0] : slug;
   const creator = COURSE_CREATORS.find((c) => c.slug === slugValue);
@@ -238,7 +229,7 @@ export default function CourseScreen() {
   if (!creator) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.text }}>Course not found.</Text>
+        <Text style={{ color: theme.text }}>{t.course.notFound}</Text>
       </View>
     );
   }
@@ -290,12 +281,12 @@ export default function CourseScreen() {
               style={[styles.playerTitle, { color: theme.text }]}
               numberOfLines={2}
             >
-              {selected.title}
+              {videoTitle(selected.videoId, selected.title)}
             </Text>
             <Pressable
               onPress={() => setSelected(null)}
               hitSlop={8}
-              accessibilityLabel="Close player"
+              accessibilityLabel={t.course.closePlayer}
             >
               <Ionicons name="close" size={22} color={theme.textMuted} />
             </Pressable>
@@ -324,10 +315,10 @@ export default function CourseScreen() {
           <View style={styles.playerStatusRow}>
             <Text style={[styles.playerStatus, { color: theme.textMuted }]}>
               {selectedCompleted
-                ? "Completed"
+                ? t.common.completed
                 : selectedPct > 0
-                  ? `Watched ${selectedPct}%`
-                  : "Tap play to start watching"}
+                  ? t.common.watchedPct(selectedPct)
+                  : t.course.tapPlayToStart}
             </Text>
             {!selected.megaLessonId && !selectedCompleted && (
               <Pressable
@@ -338,7 +329,7 @@ export default function CourseScreen() {
                 ]}
               >
                 <Text style={{ color: theme.text, fontSize: 13 }}>
-                  Mark as complete
+                  {t.course.markAsComplete}
                 </Text>
               </Pressable>
             )}
@@ -359,8 +350,11 @@ export default function CourseScreen() {
               {playlist.title}
             </Text>
             <Text style={[styles.sectionMeta, { color: theme.textMuted }]}>
-              {playlist.videos.length} videos ·{" "}
-              {formatTotal(playlistSeconds(playlist))} · {done} completed
+              {t.course.playlistMeta(
+                playlist.videos.length,
+                t.common.durationTotal(playlistSeconds(playlist)),
+                done
+              )}
             </Text>
             {playlist.videos.map((video, i) => (
               <VideoRow
@@ -380,14 +374,16 @@ export default function CourseScreen() {
       {creator.oneShots.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            One-shot videos
+            {t.course.oneShotsHeading}
           </Text>
           <Text style={[styles.sectionMeta, { color: theme.textMuted }]}>
-            {creator.oneShots.length} videos ·{" "}
-            {formatTotal(
-              creator.oneShots.reduce(
-                (n, v) => n + (v.durationSeconds ?? 0),
-                0
+            {t.course.oneShotsMeta(
+              creator.oneShots.length,
+              t.common.durationTotal(
+                creator.oneShots.reduce(
+                  (n, v) => n + (v.durationSeconds ?? 0),
+                  0
+                )
               )
             )}
           </Text>

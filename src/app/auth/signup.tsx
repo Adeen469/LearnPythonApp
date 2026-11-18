@@ -20,16 +20,16 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { emailSignup } from "../../lib/api";
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error
-    ? err.message
-    : "Something went wrong. Please try again.";
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export default function SignUpScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,15 +39,15 @@ export default function SignUpScreen() {
 
   async function handleSignUp() {
     if (!name.trim()) {
-      setError("Enter your name.");
+      setError(t.auth.enterName);
       return;
     }
     if (!email.trim()) {
-      setError("Enter your email address.");
+      setError(t.common.enterEmailAddress);
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t.auth.passwordMin8);
       return;
     }
     setError(null);
@@ -61,7 +61,7 @@ export default function SignUpScreen() {
         params: { email: email.trim(), purpose: "signup" },
       });
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setLoading(false);
     }
@@ -76,12 +76,12 @@ export default function SignUpScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.title, { color: theme.text }]}>Create account</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.auth.createAccount}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Start learning Python — free, no card needed.
+          {t.auth.signUpSubtitle}
         </Text>
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Name</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.auth.nameLabel}</Text>
         <TextInput
           style={[
             styles.input,
@@ -91,7 +91,7 @@ export default function SignUpScreen() {
               color: theme.text,
             },
           ]}
-          placeholder="Your name"
+          placeholder={t.auth.namePlaceholder}
           placeholderTextColor={theme.textMuted}
           value={name}
           onChangeText={setName}
@@ -101,7 +101,7 @@ export default function SignUpScreen() {
           returnKeyType="next"
         />
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.email}</Text>
         <TextInput
           style={[
             styles.input,
@@ -111,7 +111,7 @@ export default function SignUpScreen() {
               color: theme.text,
             },
           ]}
-          placeholder="you@example.com"
+          placeholder={t.common.emailPlaceholder}
           placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
@@ -122,7 +122,7 @@ export default function SignUpScreen() {
           returnKeyType="next"
         />
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Password</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.password}</Text>
         <View
           style={[
             styles.passwordRow,
@@ -131,7 +131,7 @@ export default function SignUpScreen() {
         >
           <TextInput
             style={[styles.passwordInput, { color: theme.text }]}
-            placeholder="At least 8 characters"
+            placeholder={t.auth.passwordMinPlaceholder}
             placeholderTextColor={theme.textMuted}
             value={password}
             onChangeText={setPassword}
@@ -143,7 +143,7 @@ export default function SignUpScreen() {
           <Pressable
             onPress={() => setShowPassword((v) => !v)}
             hitSlop={8}
-            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+            accessibilityLabel={showPassword ? t.common.hidePassword : t.common.showPassword}
           >
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -170,13 +170,15 @@ export default function SignUpScreen() {
             <ActivityIndicator color={theme.background} />
           ) : (
             <Text style={[styles.primaryButtonText, { color: theme.background }]}>
-              Create account
+              {
+                t.auth.createAccount
+              }
             </Text>
           )}
         </Pressable>
 
         <Text style={[styles.note, { color: theme.textMuted }]}>
-          We&apos;ll email you a 6-digit code to verify your account.
+          {t.auth.verifyCodeNote}
         </Text>
 
         <Pressable
@@ -184,8 +186,8 @@ export default function SignUpScreen() {
           onPress={() => router.push("/auth/signin")}
         >
           <Text style={[styles.link, { color: theme.textSecondary }]}>
-            Already have an account?{" "}
-            <Text style={{ color: theme.text }}>Sign in</Text>
+            {t.auth.alreadyHaveAccount}{" "}
+            <Text style={{ color: theme.text }}>{t.common.signIn}</Text>
           </Text>
         </Pressable>
       </ScrollView>

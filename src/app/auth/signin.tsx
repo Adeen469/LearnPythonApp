@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { useAuth } from "../../lib/auth";
 import {
   emailSignin,
@@ -31,14 +32,13 @@ import {
 
 WebBrowser.maybeCompleteAuthSession();
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error
-    ? err.message
-    : "Something went wrong. Please try again.";
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export default function SignInScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +49,7 @@ export default function SignInScreen() {
 
   async function handleEmailSignIn() {
     if (!email.trim() || !password) {
-      setError("Enter your email and password.");
+      setError(t.auth.enterEmailAndPassword);
       return;
     }
     setError(null);
@@ -77,7 +77,7 @@ export default function SignInScreen() {
         });
         return;
       }
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setLoading(false);
     }
@@ -94,14 +94,14 @@ export default function SignInScreen() {
       if (result.type !== "success") return; // user cancelled
       const code = new URL(result.url).searchParams.get("code");
       if (!code) {
-        setError("Google sign-in didn't return a code. Please try again.");
+        setError(t.auth.googleNoCode);
         return;
       }
       await exchangeAppCode(code);
       await refresh();
       router.back();
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setGoogleLoading(false);
     }
@@ -118,9 +118,9 @@ export default function SignInScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.title, { color: theme.text }]}>Welcome back</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.auth.welcomeBack}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Sign in to continue learning Python.
+          {t.auth.signInSubtitle}
         </Text>
 
         <Pressable
@@ -131,19 +131,19 @@ export default function SignInScreen() {
           {googleLoading ? (
             <ActivityIndicator color="#1f1f1f" />
           ) : (
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
+            <Text style={styles.googleButtonText}>{t.auth.continueWithGoogle}</Text>
           )}
         </Pressable>
 
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
           <Text style={[styles.dividerText, { color: theme.textMuted }]}>
-            or continue with email
+            {t.auth.orContinueWithEmail}
           </Text>
           <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
         </View>
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.email}</Text>
         <TextInput
           style={[
             styles.input,
@@ -153,7 +153,7 @@ export default function SignInScreen() {
               color: theme.text,
             },
           ]}
-          placeholder="you@example.com"
+          placeholder={t.common.emailPlaceholder}
           placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
@@ -164,7 +164,7 @@ export default function SignInScreen() {
           returnKeyType="next"
         />
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Password</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.password}</Text>
         <View
           style={[
             styles.passwordRow,
@@ -173,7 +173,7 @@ export default function SignInScreen() {
         >
           <TextInput
             style={[styles.passwordInput, { color: theme.text }]}
-            placeholder="Your password"
+            placeholder={t.auth.passwordPlaceholder}
             placeholderTextColor={theme.textMuted}
             value={password}
             onChangeText={setPassword}
@@ -185,7 +185,7 @@ export default function SignInScreen() {
           <Pressable
             onPress={() => setShowPassword((v) => !v)}
             hitSlop={8}
-            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+            accessibilityLabel={showPassword ? t.common.hidePassword : t.common.showPassword}
           >
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -212,7 +212,9 @@ export default function SignInScreen() {
             <ActivityIndicator color={theme.background} />
           ) : (
             <Text style={[styles.primaryButtonText, { color: theme.background }]}>
-              Sign in
+              {
+                t.common.signIn
+              }
             </Text>
           )}
         </Pressable>
@@ -220,12 +222,12 @@ export default function SignInScreen() {
         <View style={styles.linksRow}>
           <Pressable onPress={() => router.push("/auth/forgot")}>
             <Text style={[styles.link, { color: theme.textSecondary }]}>
-              Forgot password?
+              {t.auth.forgotPassword}
             </Text>
           </Pressable>
           <Pressable onPress={() => router.push("/auth/signup")}>
             <Text style={[styles.link, { color: theme.text }]}>
-              Create account
+              {t.auth.createAccount}
             </Text>
           </Pressable>
         </View>

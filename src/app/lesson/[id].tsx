@@ -7,7 +7,6 @@
 // the stream with the new expo-file-system API and plays the local
 // file next time.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -28,6 +27,12 @@ import {
   type ProgressState,
 } from "../../lib/progress";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
+import { tutorialSlugForLesson } from "../../lib/lesson-tutorials";
+import {
+  getLocalizedTutorial,
+  type LearnTutorial,
+} from "../../lib/tutorials";
 import { fontSize, radius, spacing, type AppTheme } from "../../lib/theme";
 import type { Lesson, QuizQuestion } from "../../lib/types";
 
@@ -42,16 +47,6 @@ function touchActivity(p: ProgressState): ProgressState {
   const yesterday = todayKey(new Date(Date.now() - 86_400_000));
   const streak = p.lastActiveDay === yesterday ? p.streakCount + 1 : 1;
   return { ...p, lastActiveDay: today, streakCount: streak };
-}
-
-function formatDuration(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const mm = String(m).padStart(2, "0");
-  const ss = String(sec).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,147 +92,59 @@ function LessonVideo({
 }
 
 // ---------------------------------------------------------------------------
-// Notes — small local Markdown renderer (headings, code blocks,
-// lists, paragraphs, **bold**, `code`). Lines mentioning YouTube are
-// dropped: the app never says where videos come from.
+// Tutorial — the written lesson, bundled in the app (see
+// src/lib/tutorials.ts). Rendered below the video, same structure as
+// the website's lesson page: title, intro, blocks (heading / para /
+// code / list / note / tip), then a Summary + Practice card. Shown in
+// the user's language when a translation overlay exists, English
+// otherwise. Code blocks are never translated.
 // ---------------------------------------------------------------------------
 
-type NoteBlock =
-  | { kind: "heading"; level: number; text: string }
-  | { kind: "paragraph"; text: string }
-  | { kind: "code"; text: string }
-  | { kind: "list"; items: string[] };
-
-function parseNotes(raw: string): NoteBlock[] {
-  const lines = raw
-    .split("\n")
-    .map((l) => l.trimEnd())
-    .filter((l) => !/youtu\.?be|youtube\.com/i.test(l));
-  const blocks: NoteBlock[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (line.trim() === "") {
-      i++;
-      continue;
-    }
-    if (line.trimStart().startsWith("```")) {
-      const buf: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].trimStart().startsWith("```")) {
-        buf.push(lines[i]);
-        i++;
-      }
-      i++; // closing fence
-      if (buf.join("").trim().length > 0) {
-        blocks.push({ kind: "code", text: buf.join("\n") });
-      }
-      continue;
-    }
-    const heading = /^(#{1,3})\s+(.*)$/.exec(line.trimStart());
-    if (heading) {
-      blocks.push({
-        kind: "heading",
-        level: heading[1].length,
-        text: heading[2].trim(),
-      });
-      i++;
-      continue;
-    }
-    if (/^[-*]\s+/.test(line.trimStart())) {
-      const items: string[] = [];
-      while (i < lines.length && /^[-*]\s+/.test(lines[i].trimStart())) {
-        items.push(lines[i].trimStart().replace(/^[-*]\s+/, ""));
-        i++;
-      }
-      blocks.push({ kind: "list", items });
-      continue;
-    }
-    const buf: string[] = [line.trim()];
-    i++;
-    while (
-      i < lines.length &&
-      lines[i].trim() !== "" &&
-      !lines[i].trimStart().startsWith("```") &&
-      !/^(#{1,3})\s+/.test(lines[i].trimStart()) &&
-      !/^[-*]\s+/.test(lines[i].trimStart())
-    ) {
-      buf.push(lines[i].trim());
-      i++;
-    }
-    blocks.push({ kind: "paragraph", text: buf.join(" ") });
-  }
-  return blocks;
-}
-
-function renderInline(
-  text: string,
-  theme: AppTheme,
-  keyPrefix: string
-): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return parts.map((part, idx) => {
-    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-      return (
-        <Text
-          key={`${keyPrefix}-${idx}`}
-          style={{ fontWeight: "700", color: theme.text }}
-        >
-          {part.slice(2, -2)}
-        </Text>
-      );
-    }
-    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-      return (
-        <Text
-          key={`${keyPrefix}-${idx}`}
-          style={{
-            fontFamily: "monospace",
-            backgroundColor: theme.surface2,
-            color: theme.text,
-          }}
-        >
-          {part.slice(1, -1)}
-        </Text>
-      );
-    }
-    return (
-      <Text key={`${keyPrefix}-${idx}`} style={{ color: theme.textSecondary }}>
-        {part}
-      </Text>
-    );
-  });
-}
-
-function NotesSection({ notes, theme }: { notes: string; theme: AppTheme }) {
-  const blocks = useMemo(() => parseNotes(notes), [notes]);
-  if (blocks.length === 0) {
-    return (
-      <Text style={{ color: theme.textMuted, fontSize: fontSize.sm }}>
-        No notes for this lesson yet.
-      </Text>
-    );
-  }
+function TutorialSection({
+  tutorial,
+  theme,
+}: {
+  tutorial: LearnTutorial;
+  theme: AppTheme;
+}) {
+  const { t } = useLanguage();
   return (
-    <View style={{ gap: spacing.sm }}>
-      {blocks.map((block, bi) => {
-        if (block.kind === "heading") {
-          const size =
-            block.level === 1
-              ? fontSize.lg
-              : block.level === 2
-                ? fontSize.md
-                : fontSize.sm;
+    <View style={{ gap: spacing.md }}>
+      <Text
+        style={{
+          color: theme.text,
+          fontSize: fontSize.lg,
+          fontWeight: "700",
+        }}
+      >
+        {tutorial.title}
+      </Text>
+      <Text
+        style={{
+          color: theme.textSecondary,
+          fontSize: fontSize.sm,
+          lineHeight: 22,
+        }}
+      >
+        {tutorial.intro}
+      </Text>
+      {tutorial.blocks.map((block, bi) => {
+        if (block.type === "heading") {
           return (
             <Text
               key={bi}
-              style={{ color: theme.text, fontSize: size, fontWeight: "700" }}
+              style={{
+                color: theme.text,
+                fontSize: fontSize.md,
+                fontWeight: "700",
+                marginTop: spacing.sm,
+              }}
             >
-              {renderInline(block.text, theme, `h${bi}`)}
+              {block.text}
             </Text>
           );
         }
-        if (block.kind === "code") {
+        if (block.type === "code") {
           return (
             <View
               key={bi}
@@ -245,8 +152,20 @@ function NotesSection({ notes, theme }: { notes: string; theme: AppTheme }) {
                 backgroundColor: theme.surface2,
                 borderRadius: radius.sm,
                 padding: spacing.sm,
+                gap: spacing.xs,
               }}
             >
+              {block.title ? (
+                <Text
+                  style={{
+                    color: theme.textMuted,
+                    fontSize: fontSize.xs,
+                    fontWeight: "600",
+                  }}
+                >
+                  {block.title}
+                </Text>
+              ) : null}
               <Text
                 style={{
                   fontFamily: "monospace",
@@ -254,34 +173,168 @@ function NotesSection({ notes, theme }: { notes: string; theme: AppTheme }) {
                   color: theme.text,
                 }}
               >
-                {block.text}
+                {block.code}
               </Text>
+              {block.output !== undefined ? (
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderTopColor: theme.border,
+                    paddingTop: spacing.xs,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: fontSize.sm,
+                      color: theme.success,
+                    }}
+                  >
+                    {block.output}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           );
         }
-        if (block.kind === "list") {
+        if (block.type === "list") {
           return (
             <View key={bi} style={{ gap: 4 }}>
               {block.items.map((item, ii) => (
                 <Text
                   key={ii}
-                  style={{ color: theme.textSecondary, fontSize: fontSize.sm }}
+                  style={{
+                    color: theme.textSecondary,
+                    fontSize: fontSize.sm,
+                    lineHeight: 20,
+                  }}
                 >
-                  • {renderInline(item, theme, `li${bi}-${ii}`)}
+                  • {item}
                 </Text>
               ))}
+            </View>
+          );
+        }
+        if (block.type === "note") {
+          return (
+            <View
+              key={bi}
+              style={{
+                borderWidth: 1,
+                borderColor: theme.warning,
+                borderRadius: radius.sm,
+                padding: spacing.sm,
+                backgroundColor: theme.surface,
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.textSecondary,
+                  fontSize: fontSize.sm,
+                  lineHeight: 20,
+                }}
+              >
+                {block.text}
+              </Text>
+            </View>
+          );
+        }
+        if (block.type === "tip") {
+          return (
+            <View
+              key={bi}
+              style={{
+                borderWidth: 1,
+                borderColor: theme.info,
+                borderRadius: radius.sm,
+                padding: spacing.sm,
+                backgroundColor: theme.surface,
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.textSecondary,
+                  fontSize: fontSize.sm,
+                  lineHeight: 20,
+                }}
+              >
+                {block.text}
+              </Text>
             </View>
           );
         }
         return (
           <Text
             key={bi}
-            style={{ color: theme.textSecondary, fontSize: fontSize.sm }}
+            style={{
+              color: theme.textSecondary,
+              fontSize: fontSize.sm,
+              lineHeight: 22,
+            }}
           >
-            {renderInline(block.text, theme, `p${bi}`)}
+            {block.text}
           </Text>
         );
       })}
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: theme.border,
+          borderRadius: radius.md,
+          backgroundColor: theme.surface,
+          padding: spacing.md,
+          gap: spacing.sm,
+        }}
+      >
+        <Text
+          style={{
+            color: theme.text,
+            fontSize: fontSize.md,
+            fontWeight: "700",
+          }}
+        >
+          {t.lesson.tutorialSummary}
+        </Text>
+        <View style={{ gap: 4 }}>
+          {tutorial.summary.map((line, i) => (
+            <Text
+              key={i}
+              style={{
+                color: theme.textSecondary,
+                fontSize: fontSize.sm,
+                lineHeight: 20,
+              }}
+            >
+              <Text style={{ color: theme.success }}>✓ </Text>
+              {line}
+            </Text>
+          ))}
+        </View>
+        <Text
+          style={{
+            color: theme.text,
+            fontSize: fontSize.md,
+            fontWeight: "700",
+            marginTop: spacing.sm,
+          }}
+        >
+          {t.lesson.tutorialPractice}
+        </Text>
+        <View style={{ gap: 4 }}>
+          {tutorial.practice.map((task, i) => (
+            <Text
+              key={i}
+              style={{
+                color: theme.textSecondary,
+                fontSize: fontSize.sm,
+                lineHeight: 20,
+              }}
+            >
+              {i + 1}. {task}
+            </Text>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -292,6 +345,7 @@ function NotesSection({ notes, theme }: { notes: string; theme: AppTheme }) {
 // ---------------------------------------------------------------------------
 
 function QuizSection({ quiz, theme }: { quiz: QuizQuestion[]; theme: AppTheme }) {
+  const { t } = useLanguage();
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [correct, setCorrect] = useState(0);
@@ -306,16 +360,15 @@ function QuizSection({ quiz, theme }: { quiz: QuizQuestion[]; theme: AppTheme })
     return (
       <View style={{ gap: spacing.sm }}>
         <Text style={{ color: theme.text, fontSize: fontSize.md, fontWeight: "600" }}>
-          Your score: {correct}/{total} ({Math.round((correct / total) * 100)}
-          %)
+          {t.lesson.quizScore(correct, total)}
         </Text>
         {passed ? (
           <Text style={{ color: theme.success, fontWeight: "700" }}>
-            ✓ Test passed
+            {t.lesson.quizPassed}
           </Text>
         ) : (
           <Text style={{ color: theme.warning }}>
-            Not quite — 70% or more passes. Try again.
+            {t.lesson.quizFailed}
           </Text>
         )}
         <Pressable
@@ -327,7 +380,7 @@ function QuizSection({ quiz, theme }: { quiz: QuizQuestion[]; theme: AppTheme })
             setFinished(false);
           }}
         >
-          <Text style={{ color: theme.text }}>Retake quiz</Text>
+          <Text style={{ color: theme.text }}>{t.lesson.quizRetake}</Text>
         </Pressable>
       </View>
     );
@@ -336,7 +389,7 @@ function QuizSection({ quiz, theme }: { quiz: QuizQuestion[]; theme: AppTheme })
   return (
     <View style={{ gap: spacing.sm }}>
       <Text style={{ color: theme.textMuted, fontSize: fontSize.xs }}>
-        Question {index + 1} of {total}
+        {t.lesson.quizQuestionOf(index + 1, total)}
       </Text>
       <Text style={{ color: theme.text, fontSize: fontSize.md, fontWeight: "600" }}>
         {q.question}
@@ -382,7 +435,7 @@ function QuizSection({ quiz, theme }: { quiz: QuizQuestion[]; theme: AppTheme })
           }}
         >
           <Text style={{ color: theme.text }}>
-            {index + 1 >= total ? "See result" : "Next question"}
+            {index + 1 >= total ? t.lesson.quizSeeResult : t.lesson.quizNext}
           </Text>
         </Pressable>
       )}
@@ -396,6 +449,7 @@ function QuizSection({ quiz, theme }: { quiz: QuizQuestion[]; theme: AppTheme })
 
 export default function LessonScreen() {
   const { theme } = useTheme();
+  const { t, lessonTitle, lang } = useLanguage();
   const params = useLocalSearchParams<{ id: string }>();
   const rawId = params.id;
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -417,6 +471,16 @@ export default function LessonScreen() {
     () => lessons.find((l) => l.id === id) ?? null,
     [lessons, id]
   );
+
+  // Written lesson for this lesson (bundled tutorial, localised when a
+  // translation overlay exists, English otherwise). Null when the
+  // lesson has no tutorial — the notes section then shows the empty
+  // text instead of a wrong tutorial.
+  const tutorial = useMemo(() => {
+    const slug = tutorialSlugForLesson(lesson?.id ?? "");
+    if (!slug) return null;
+    return getLocalizedTutorial(slug, lang);
+  }, [lesson, lang]);
 
   const offlineFile = useMemo(
     () => new File(Paths.document, "offline", `${id}.mp4`),
@@ -537,16 +601,16 @@ export default function LessonScreen() {
         setOfflineSaved(true);
         setDlProgress(null);
       } else {
-        setDlError("Download paused — tap again to retry.");
+        setDlError(t.lesson.downloadPaused);
         setDlProgress(null);
       }
     } catch (e) {
-      setDlError(e instanceof Error ? e.message : "Download failed.");
+      setDlError(e instanceof Error ? e.message : t.lesson.downloadFailed);
       setDlProgress(null);
     } finally {
       setDownloading(false);
     }
-  }, [lesson, downloading, offlineFile]);
+  }, [lesson, downloading, offlineFile, t]);
 
   const removeOffline = useCallback(() => {
     try {
@@ -569,13 +633,13 @@ export default function LessonScreen() {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Text style={{ color: theme.danger, textAlign: "center" }}>
-          {error ?? "Lesson not found."}
+          {error ?? t.lesson.notFound}
         </Text>
         <Pressable
           style={[styles.smallButton, { borderColor: theme.border, marginTop: spacing.md }]}
           onPress={() => router.back()}
         >
-          <Text style={{ color: theme.text }}>Go back</Text>
+          <Text style={{ color: theme.text }}>{t.common.goBack}</Text>
         </Pressable>
       </View>
     );
@@ -608,11 +672,11 @@ export default function LessonScreen() {
       <View style={{ padding: spacing.md, gap: spacing.lg }}>
         <View>
           <Text style={[styles.title, { color: theme.text }]}>
-            {lesson.title}
+            {lessonTitle(lesson.id, lesson.title)}
           </Text>
           <Text style={[styles.meta, { color: theme.textMuted }]}>
-            {lesson.moduleTitle} · {formatDuration(lesson.durationSeconds)}
-            {offlineSaved ? " · Saved offline" : ""}
+            {lesson.moduleTitle} · {t.common.duration(lesson.durationSeconds)}
+            {offlineSaved ? ` · ${t.lesson.savedOffline}` : ""}
           </Text>
           <View
             style={[
@@ -632,10 +696,10 @@ export default function LessonScreen() {
           </View>
           <Text style={[styles.meta, { color: theme.textMuted }]}>
             {isComplete
-              ? "Completed"
+              ? t.common.completed
               : pct > 0
-                ? `Watched ${pct}%`
-                : "Not started"}
+                ? t.common.watchedPct(pct)
+                : t.common.notStarted}
           </Text>
         </View>
 
@@ -649,7 +713,7 @@ export default function LessonScreen() {
             disabled={isComplete}
           >
             <Text style={{ color: theme.text }}>
-              {isComplete ? "✓ Completed" : "Mark complete"}
+              {isComplete ? t.lesson.completedButton : t.lesson.markComplete}
             </Text>
           </Pressable>
           <Link href={`/tutor?lessonId=${lesson.id}`} asChild>
@@ -659,7 +723,7 @@ export default function LessonScreen() {
                 { backgroundColor: theme.surface2, borderColor: theme.border },
               ]}
             >
-              <Text style={{ color: theme.text }}>Ask AI Tutor</Text>
+              <Text style={{ color: theme.text }}>{t.lesson.askTutor}</Text>
             </Pressable>
           </Link>
         </View>
@@ -675,12 +739,12 @@ export default function LessonScreen() {
           >
             <Text style={{ color: theme.text }}>
               {offlineSaved
-                ? "Remove download"
+                ? t.lesson.removeDownload
                 : downloading
                   ? dlProgress !== null
-                    ? `Downloading ${Math.round(dlProgress * 100)}%`
-                    : "Downloading…"
-                  : "Save Offline"}
+                    ? t.lesson.downloadingPct(Math.round(dlProgress * 100))
+                    : t.lesson.downloading
+                  : t.lesson.saveOffline}
             </Text>
           </Pressable>
         </View>
@@ -691,13 +755,18 @@ export default function LessonScreen() {
         ) : null}
 
         <View>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Notes</Text>
-          <NotesSection notes={lesson.notes} theme={theme} />
+          {tutorial ? (
+            <TutorialSection tutorial={tutorial} theme={theme} />
+          ) : (
+            <Text style={{ color: theme.textMuted, fontSize: fontSize.sm }}>
+              {t.lesson.notesEmpty}
+            </Text>
+          )}
         </View>
 
         {lesson.quiz && lesson.quiz.length > 0 && (
           <View>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Quiz</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.lesson.quizHeading}</Text>
             <QuizSection key={lesson.id} quiz={lesson.quiz} theme={theme} />
           </View>
         )}
@@ -708,7 +777,7 @@ export default function LessonScreen() {
               style={[styles.navButton, { borderColor: theme.border }]}
               onPress={() => router.push(`/lesson/${prev.id}`)}
             >
-              <Text style={{ color: theme.text }}>← Prev</Text>
+              <Text style={{ color: theme.text }}>{t.lesson.prevLesson}</Text>
             </Pressable>
           ) : (
             <View style={{ flex: 1 }} />
@@ -718,7 +787,7 @@ export default function LessonScreen() {
               style={[styles.navButton, { borderColor: theme.border }]}
               onPress={() => router.push(`/lesson/${next.id}`)}
             >
-              <Text style={{ color: theme.text }}>Next →</Text>
+              <Text style={{ color: theme.text }}>{t.lesson.nextLesson}</Text>
             </Pressable>
           ) : (
             <View style={{ flex: 1 }} />

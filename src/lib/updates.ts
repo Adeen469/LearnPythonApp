@@ -25,6 +25,7 @@ import { Platform } from "react-native";
 import { Directory, File, Paths } from "expo-file-system";
 import { getContentUriAsync } from "expo-file-system/legacy";
 import * as IntentLauncher from "expo-intent-launcher";
+import { getCurrentStrings } from "./i18n";
 
 export const UPDATE_REPO = "Adeen469/LearnPythonApp";
 const RELEASES_LATEST_URL = `https://api.github.com/repos/${UPDATE_REPO}/releases/latest`;
@@ -164,7 +165,8 @@ export async function downloadAndInstall(
     },
   });
   const downloaded = await task.downloadAsync();
-  if (!downloaded) throw new Error("Download was interrupted.");
+  if (!downloaded)
+    throw new Error(getCurrentStrings().update.downloadInterrupted);
   const contentUri = await getContentUriAsync(downloaded.uri);
   await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
     data: contentUri,

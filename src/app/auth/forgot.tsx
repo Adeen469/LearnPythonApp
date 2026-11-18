@@ -18,16 +18,16 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { forgotPassword } from "../../lib/api";
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error
-    ? err.message
-    : "Something went wrong. Please try again.";
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export default function ForgotScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function ForgotScreen() {
 
   async function handleSend() {
     if (!email.trim()) {
-      setError("Enter your email address.");
+      setError(t.common.enterEmailAddress);
       return;
     }
     setError(null);
@@ -44,7 +44,7 @@ export default function ForgotScreen() {
       await forgotPassword(email.trim());
       setSent(true);
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setLoading(false);
     }
@@ -68,16 +68,13 @@ export default function ForgotScreen() {
               style={styles.icon}
             />
             <Text style={[styles.title, { color: theme.text }]}>
-              Check your email
+              {t.common.checkYourEmail}
             </Text>
             <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-              If an account exists for{" "}
-              <Text style={{ color: theme.text }}>{email.trim()}</Text>, we sent
-              a password reset link there.
+              {t.auth.resetLinkSentFor(email.trim())}
             </Text>
             <Text style={[styles.note, { color: theme.textMuted }]}>
-              The link opens the website, where you choose a new password.
-              Then come back here and sign in with it.
+              {t.auth.resetLinkNote}
             </Text>
             <Pressable
               style={[
@@ -89,21 +86,20 @@ export default function ForgotScreen() {
               <Text
                 style={[styles.primaryButtonText, { color: theme.background }]}
               >
-                Back to sign in
+                {t.common.backToSignIn}
               </Text>
             </Pressable>
           </>
         ) : (
           <>
             <Text style={[styles.title, { color: theme.text }]}>
-              Forgot password
+              {t.auth.forgotPasswordTitle}
             </Text>
             <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-              Enter the email you signed up with and we&apos;ll send you a
-              reset link.
+              {t.auth.forgotSubtitle}
             </Text>
 
-            <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.email}</Text>
             <TextInput
               style={[
                 styles.input,
@@ -113,7 +109,7 @@ export default function ForgotScreen() {
                   color: theme.text,
                 },
               ]}
-              placeholder="you@example.com"
+              placeholder={t.common.emailPlaceholder}
               placeholderTextColor={theme.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -144,7 +140,7 @@ export default function ForgotScreen() {
                 <Text
                   style={[styles.primaryButtonText, { color: theme.background }]}
                 >
-                  Send reset link
+                  {t.auth.sendResetLink}
                 </Text>
               )}
             </Pressable>
@@ -157,7 +153,7 @@ export default function ForgotScreen() {
                   { color: theme.textMuted, textAlign: "center" },
                 ]}
               >
-                Back to sign in
+                {t.common.backToSignIn}
               </Text>
             </Pressable>
           </>

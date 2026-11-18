@@ -9,33 +9,27 @@ import {
   type CourseCreator,
 } from "../../lib/courses-data";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage, type Strings } from "../../lib/i18n";
 
-function creatorCounts(creator: CourseCreator): string {
+function creatorCounts(creator: CourseCreator, t: Strings): string {
   const playlistVideos = creator.playlists.reduce(
     (n, p) => n + p.videos.length,
     0
   );
   const parts: string[] = [];
   if (creator.playlists.length > 0) {
-    parts.push(
-      `${creator.playlists.length} playlist${
-        creator.playlists.length === 1 ? "" : "s"
-      }`
-    );
-    parts.push(`${playlistVideos} video${playlistVideos === 1 ? "" : "s"}`);
+    parts.push(t.courses.countPlaylists(creator.playlists.length));
+    parts.push(t.courses.countVideos(playlistVideos));
   }
   if (creator.oneShots.length > 0) {
-    parts.push(
-      `${creator.oneShots.length} one-shot${
-        creator.oneShots.length === 1 ? "" : "s"
-      }`
-    );
+    parts.push(t.courses.countOneShots(creator.oneShots.length));
   }
   return parts.join(" · ");
 }
 
 export default function CoursesScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <ScrollView
@@ -43,7 +37,7 @@ export default function CoursesScreen() {
       contentContainerStyle={styles.content}
     >
       <Text style={[styles.intro, { color: theme.textMuted }]}>
-        Full Python video courses — pick a creator to start watching.
+        {t.courses.intro}
       </Text>
 
       {COURSE_CREATORS.map((creator) => (
@@ -71,7 +65,7 @@ export default function CoursesScreen() {
                 {creator.handle} · {creator.subscribers}
               </Text>
               <Text style={[styles.meta, { color: theme.textMuted }]}>
-                {creator.language} · {creatorCounts(creator)}
+                {creator.language} · {creatorCounts(creator, t)}
               </Text>
             </View>
             <Ionicons

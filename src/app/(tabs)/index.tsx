@@ -23,6 +23,7 @@ import {
   type ProgressState,
 } from "../../lib/progress";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { fontSize, radius, spacing } from "../../lib/theme";
 import type { Lesson } from "../../lib/types";
 
@@ -71,6 +72,7 @@ interface LessonSection {
 
 export default function LearnScreen() {
   const { theme } = useTheme();
+  const { t, lessonTitle } = useLanguage();
   const { user } = useAuth();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [progress, setProgress] = useState<ProgressState | null>(null);
@@ -133,11 +135,16 @@ export default function LearnScreen() {
       const done = data.filter((l) => completed.has(l.id)).length;
       return {
         title: stage.title,
-        subtitle: `Days ${stage.fromDay}–${stage.toDay} · ${done}/${data.length} complete`,
+        subtitle: t.learn.sectionSubtitle(
+          stage.fromDay,
+          stage.toDay,
+          done,
+          data.length
+        ),
         data,
       };
     }).filter((s) => s.data.length > 0);
-  }, [lessons, completed]);
+  }, [lessons, completed, t]);
 
   const totalDone = completed.size;
   const firstName = user?.name?.split(" ")[0];
@@ -154,7 +161,8 @@ export default function LearnScreen() {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Text style={{ color: theme.danger, textAlign: "center" }}>
-          Couldn&apos;t load lessons.{"\n"}
+          {t.learn.loadError}
+          {"\n"}
           {error}
         </Text>
         <Pressable
@@ -168,7 +176,7 @@ export default function LearnScreen() {
               .finally(() => setLoading(false));
           }}
         >
-          <Text style={{ color: theme.text }}>Retry</Text>
+          <Text style={{ color: theme.text }}>{t.common.retry}</Text>
         </Pressable>
       </View>
     );
@@ -188,10 +196,10 @@ export default function LearnScreen() {
       ListHeaderComponent={
         <View style={{ marginBottom: spacing.md }}>
           <Text style={[styles.greeting, { color: theme.text }]}>
-            {firstName ? `Hi, ${firstName}` : "Learn Python"}
+            {firstName ? t.learn.greeting(firstName) : t.common.appName}
           </Text>
           <Text style={[styles.sub, { color: theme.textMuted }]}>
-            100 Days of Code · {totalDone}/100 lessons complete
+            {t.learn.progressSummary(totalDone)}
           </Text>
 
           <View style={styles.chipRow}>
@@ -202,8 +210,7 @@ export default function LearnScreen() {
               ]}
             >
               <Text style={{ color: theme.text, fontSize: fontSize.sm }}>
-                Streak: {progress?.streakCount ?? 0}{" "}
-                {(progress?.streakCount ?? 0) === 1 ? "day" : "days"}
+                {t.learn.streakChip(progress?.streakCount ?? 0)}
               </Text>
             </View>
             <Pressable
@@ -214,7 +221,7 @@ export default function LearnScreen() {
               onPress={() => router.push("/roadmap")}
             >
               <Text style={{ color: theme.text, fontSize: fontSize.sm }}>
-                Roadmap
+                {t.common.roadmap}
               </Text>
             </Pressable>
           </View>
@@ -231,15 +238,20 @@ export default function LearnScreen() {
                 ]}
               >
                 <Text style={[styles.continueLabel, { color: theme.textMuted }]}>
-                  Continue where you left off
+                  {t.learn.continueLabel}
                 </Text>
                 <Text style={[styles.continueTitle, { color: theme.text }]}>
-                  Day {dayNumber(resumeLesson, 0)} ·{" "}
-                  {shortTitle(resumeLesson.title)}
+                  {t.learn.continueTitle(
+                    dayNumber(resumeLesson, 0),
+                    shortTitle(lessonTitle(resumeLesson.id, resumeLesson.title))
+                  )}
                 </Text>
                 <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm }}>
                   {resumePct > 0
-                    ? `Watched ${resumePct}% · ${formatDuration(resumeLesson.durationSeconds)}`
+                    ? t.learn.continueWatched(
+                        resumePct,
+                        formatDuration(resumeLesson.durationSeconds)
+                      )
                     : formatDuration(resumeLesson.durationSeconds)}
                 </Text>
               </Pressable>
@@ -253,10 +265,10 @@ export default function LearnScreen() {
               ]}
             >
               <Text style={[styles.continueTitle, { color: theme.text }]}>
-                All 100 lessons complete
+                {t.learn.allCompleteTitle}
               </Text>
               <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm }}>
-                Nice work — revisit any lesson below.
+                {t.learn.allCompleteSubtitle}
               </Text>
             </View>
           )}
@@ -279,12 +291,12 @@ export default function LearnScreen() {
         const pct = progress?.watchPct[item.id] ?? 0;
         const isResume = resumeLesson?.id === item.id;
         const status = done
-          ? "Completed"
+          ? t.common.completed
           : isResume && pct > 0
-            ? `Playing · ${pct}%`
+            ? t.learn.statusPlaying(pct)
             : pct > 0
-              ? `Watched ${pct}%`
-              : "Not started";
+              ? t.common.watchedPct(pct)
+              : t.common.notStarted;
         const statusColor = done
           ? theme.success
           : pct > 0
@@ -300,13 +312,13 @@ export default function LearnScreen() {
             >
               <View style={styles.rowMain}>
                 <Text style={[styles.rowDay, { color: theme.textMuted }]}>
-                  Day {dayNumber(item, 0)}
+                  {t.learn.lessonDay(dayNumber(item, 0))}
                 </Text>
                 <Text
                   style={[styles.rowTitle, { color: theme.text }]}
                   numberOfLines={2}
                 >
-                  {shortTitle(item.title)}
+                  {shortTitle(lessonTitle(item.id, item.title))}
                 </Text>
                 <Text style={[styles.rowMeta, { color: theme.textMuted }]}>
                   {formatDuration(item.durationSeconds)}

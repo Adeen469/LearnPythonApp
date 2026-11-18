@@ -13,17 +13,13 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../lib/theme-context";
+import { useLanguage } from "../lib/i18n";
 import {
   dismissUpdate,
   downloadAndInstall,
   openUnknownSourcesSettings,
   type UpdateInfo,
 } from "../lib/updates";
-
-function formatSize(bytes: number): string {
-  if (!bytes || bytes <= 0) return "";
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 type DialogState =
   | { kind: "idle" }
@@ -39,6 +35,7 @@ export default function UpdateDialog({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [state, setState] = useState<DialogState>({ kind: "idle" });
 
   async function handleLater() {
@@ -59,12 +56,13 @@ export default function UpdateDialog({
         message:
           e instanceof Error
             ? e.message
-            : "The update could not be downloaded.",
+            : t.update.downloadFailed,
       });
     }
   }
 
-  const size = formatSize(info.sizeBytes);
+  const size =
+    info.sizeBytes && info.sizeBytes > 0 ? t.update.sizeMB(info.sizeBytes) : "";
   const downloading = state.kind === "downloading";
   const busy = downloading || state.kind === "installing";
 
@@ -91,12 +89,10 @@ export default function UpdateDialog({
           ]}
         >
           <Text style={[styles.title, { color: theme.text }]}>
-            Update available
+            {t.update.available}
           </Text>
           <Text style={[styles.version, { color: theme.textMuted }]}>
-            Version {info.version}
-            {size ? ` · ${size}` : ""}
-            {info.mandatory ? " · Required" : ""}
+            {t.update.versionLine(info.version, size, info.mandatory)}
           </Text>
 
           {info.notes ? (
@@ -110,7 +106,7 @@ export default function UpdateDialog({
             </ScrollView>
           ) : (
             <Text style={[styles.body, { color: theme.textMuted }]}>
-              A new version of Learn Python is available.
+              {t.update.newVersionAvailable}
             </Text>
           )}
 
@@ -130,7 +126,7 @@ export default function UpdateDialog({
                 />
               </View>
               <Text style={[styles.progressText, { color: theme.textMuted }]}>
-                Downloading… {Math.round(state.progress * 100)}%
+                {t.update.downloading(Math.round(state.progress * 100))}
               </Text>
             </View>
           ) : null}
@@ -139,7 +135,7 @@ export default function UpdateDialog({
             <View style={styles.progressWrap}>
               <ActivityIndicator color={theme.text} />
               <Text style={[styles.progressText, { color: theme.textMuted }]}>
-                Opening installer…
+                {t.update.openingInstaller}
               </Text>
             </View>
           ) : null}
@@ -164,7 +160,7 @@ export default function UpdateDialog({
               <Text
                 style={[styles.primaryText, { color: theme.background }]}
               >
-                Allow installs in settings
+                {t.update.allowInstallsInSettings}
               </Text>
             </Pressable>
           ) : null}
@@ -182,7 +178,7 @@ export default function UpdateDialog({
               <ActivityIndicator color={theme.background} />
             ) : (
               <Text style={[styles.primaryText, { color: theme.background }]}>
-                {state.kind === "error" ? "Try again" : "Update"}
+                {state.kind === "error" ? t.update.tryAgain : t.update.update}
               </Text>
             )}
           </Pressable>
@@ -193,14 +189,14 @@ export default function UpdateDialog({
               onPress={handleLater}
             >
               <Text style={[styles.secondaryText, { color: theme.text }]}>
-                Later
+                {t.update.later}
               </Text>
             </Pressable>
           ) : null}
 
           {info.mandatory ? (
             <Text style={[styles.hint, { color: theme.textMuted }]}>
-              This update is required to keep using the app.
+              {t.update.mandatoryHint}
             </Text>
           ) : null}
         </View>

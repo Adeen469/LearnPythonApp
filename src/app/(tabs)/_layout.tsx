@@ -2,9 +2,11 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 
 export default function TabsLayout() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   return (
     <Tabs
       screenOptions={{
@@ -22,7 +24,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Learn",
+          title: t.tabs.learn,
           tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="book-outline"
@@ -35,7 +37,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="courses"
         options={{
-          title: "Courses",
+          title: t.tabs.courses,
           tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="play-circle-outline"
@@ -48,7 +50,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="editor"
         options={{
-          title: "Editor",
+          title: t.tabs.editor,
           tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="code-slash-outline"
@@ -61,7 +63,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t.tabs.profile,
           tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name="person-outline"

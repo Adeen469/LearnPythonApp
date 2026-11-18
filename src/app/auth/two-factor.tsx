@@ -14,17 +14,17 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { useAuth } from "../../lib/auth";
 import { send2faCode, verify2fa } from "../../lib/api";
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error
-    ? err.message
-    : "Something went wrong. Please try again.";
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export default function TwoFactorScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { refresh } = useAuth();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export default function TwoFactorScreen() {
 
   async function handleVerify() {
     if (code.trim().length !== 6) {
-      setError("Enter the 6-digit code.");
+      setError(t.common.enterSixDigitCode);
       return;
     }
     setError(null);
@@ -45,7 +45,7 @@ export default function TwoFactorScreen() {
       await refresh();
       router.back();
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setLoading(false);
     }
@@ -57,9 +57,9 @@ export default function TwoFactorScreen() {
     setResending(true);
     try {
       await send2faCode();
-      setInfo("A code was sent to your email.");
+      setInfo(t.auth.codeSentToEmail);
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setResending(false);
     }
@@ -75,15 +75,13 @@ export default function TwoFactorScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.title, { color: theme.text }]}>
-          Two-factor auth
+          {t.auth.twoFactorTitle}
         </Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Your account has two-factor authentication on. Enter the
-          6-digit code from your authenticator app — or tap resend to
-          get a code by email instead.
+          {t.auth.twoFactorSubtitle}
         </Text>
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>6-digit code</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.sixDigitCodeLabel}</Text>
         <TextInput
           style={[
             styles.input,
@@ -93,7 +91,7 @@ export default function TwoFactorScreen() {
               color: theme.text,
             },
           ]}
-          placeholder="123456"
+          placeholder={t.common.codePlaceholder}
           placeholderTextColor={theme.textMuted}
           value={code}
           onChangeText={(v) => setCode(v.replace(/[^0-9]/g, "").slice(0, 6))}
@@ -124,7 +122,7 @@ export default function TwoFactorScreen() {
             <ActivityIndicator color={theme.background} />
           ) : (
             <Text style={[styles.primaryButtonText, { color: theme.background }]}>
-              Verify and sign in
+              {t.auth.verifyAndSignIn}
             </Text>
           )}
         </Pressable>
@@ -138,7 +136,7 @@ export default function TwoFactorScreen() {
             <ActivityIndicator color={theme.textMuted} size="small" />
           ) : (
             <Text style={[styles.link, { color: theme.textSecondary }]}>
-              Resend code by email
+              {t.auth.resendCodeByEmail}
             </Text>
           )}
         </Pressable>

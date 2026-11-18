@@ -4,7 +4,7 @@ The Learn Python app as a proper native app, built with Expo (SDK 58) and Expo R
 
 ## Tabs
 
-- **Learn** — all 100 lessons, grouped by stage, with video, notes, quiz and offline save
+- **Learn** — all 100 lessons, grouped by stage, with video, written lesson (tutorial), quiz and offline save
 - **Courses** — CodeWithHarry, Code With Mosh and Apna College playlists and one-shots
 - **Editor** — the website's Pyodide code editor in a WebView
 - **Profile** — sign-in, streak, daily goal and settings
@@ -17,6 +17,11 @@ The Learn Python app as a proper native app, built with Expo (SDK 58) and Expo R
 - Streak tracking and daily goals (device-only — the website's per-user progress sync is intentionally not used)
 - Save lessons offline for watching without a connection
 - Dark-first theme, muted neutrals — no saturated gradients, no 3D cards
+- 12 languages (English, Hinglish, Roman Urdu, French, Japanese, Korean, Spanish, German, Portuguese, Russian, Arabic, Chinese) — switch in Settings; lesson titles, video titles, roadmap names and the written lessons are translated too, the videos themselves are not
+
+## Languages
+
+The app UI is fully translated — see the "Languages (i18n)" section in `API.md`. To add a string: add the key to `src/lib/i18n/en.ts` and the same key, translated, to the other 11 language files (`npx tsc --noEmit` fails if any file misses a key). To add a language: create `src/lib/i18n/<code>.ts` plus `src/lib/i18n/titles/<code>.ts`, and add it to `LANGUAGES` in `src/lib/i18n/index.tsx`.
 
 ## Run it
 

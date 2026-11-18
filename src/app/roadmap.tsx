@@ -19,6 +19,7 @@ import {
   type RoadmapTopic,
 } from "../lib/roadmap-data";
 import { useTheme } from "../lib/theme-context";
+import { useLanguage } from "../lib/i18n";
 import { fontSize, radius, spacing } from "../lib/theme";
 import type { Lesson } from "../lib/types";
 
@@ -82,6 +83,7 @@ function findLessonForTopic(
 
 export default function RoadmapScreen() {
   const { theme } = useTheme();
+  const { t, roadmapName } = useLanguage();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,18 +157,18 @@ export default function RoadmapScreen() {
       style={{ backgroundColor: theme.background }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: 32 }}
     >
-      <Text style={[styles.title, { color: theme.text }]}>Roadmap</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t.common.roadmap}</Text>
       <Text style={[styles.sub, { color: theme.textMuted }]}>
-        {doneTopics} of {totalTopics} topics complete
+        {t.roadmap.topicsComplete(doneTopics, totalTopics)}
       </Text>
 
       {ROADMAP_STAGES.map((stage) => (
         <View key={stage.id} style={{ marginTop: spacing.lg }}>
           <Text style={[styles.stageTitle, { color: theme.text }]}>
-            {stage.title}
+            {roadmapName(stage.title)}
           </Text>
           <Text style={[styles.stageSub, { color: theme.textMuted }]}>
-            {stage.topics.length} topics
+            {t.roadmap.stageTopicCount(stage.topics.length)}
           </Text>
 
           <View style={styles.rail}>
@@ -211,7 +213,7 @@ export default function RoadmapScreen() {
                       <Text
                         style={[styles.topicTitle, { color: theme.text }]}
                       >
-                        {topic.title}
+                        {roadmapName(topic.title)}
                       </Text>
                       <Text
                         style={{
@@ -220,13 +222,20 @@ export default function RoadmapScreen() {
                           fontWeight: "700",
                         }}
                       >
-                        {done ? "✓ Done" : lesson ? "Lesson" : "Courses"}
+                        {done
+                          ? t.roadmap.topicDone
+                          : lesson
+                            ? t.roadmap.topicLesson
+                            : t.tabs.courses}
                       </Text>
                     </View>
                     <Text
                       style={[styles.topicMeta, { color: theme.textMuted }]}
                     >
-                      {topic.difficulty} · {topic.estimatedMinutes} min
+                      {t.roadmap.topicMeta(
+                        roadmapName(topic.difficulty),
+                        topic.estimatedMinutes
+                      )}
                     </Text>
                     <Text
                       style={[styles.topicBlurb, { color: theme.textSecondary }]}

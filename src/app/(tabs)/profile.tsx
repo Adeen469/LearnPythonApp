@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { useAuth } from "../../lib/auth";
 import {
   emptyProgress,
@@ -60,6 +61,7 @@ function MenuRow({
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user, loading, signOut } = useAuth();
   const [progress, setProgress] = useState<ProgressState>(emptyProgress);
   const [signingOut, setSigningOut] = useState(false);
@@ -103,17 +105,16 @@ export default function ProfileScreen() {
           { backgroundColor: theme.background },
         ]}
       >
-        <Text style={[styles.title, { color: theme.text }]}>Learn Python</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.common.appName}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Learn Python, online or off. Sign in to keep your progress,
-          streak and AI tutor on this device.
+          {t.profile.signedOutSubtitle}
         </Text>
         <Pressable
           style={[styles.primaryButton, { backgroundColor: theme.accent }]}
           onPress={() => router.push("/auth/signin")}
         >
           <Text style={[styles.primaryButtonText, { color: theme.background }]}>
-            Sign in
+            {t.common.signIn}
           </Text>
         </Pressable>
         <Pressable
@@ -121,13 +122,12 @@ export default function ProfileScreen() {
           onPress={() => router.push("/auth/signup")}
         >
           <Text style={[styles.link, { color: theme.textSecondary }]}>
-            New here? Create an account
+            {t.profile.createAccountLink}
           </Text>
         </Pressable>
         <View style={[styles.infoCard, { borderColor: theme.border }]}>
           <Text style={[styles.infoText, { color: theme.textMuted }]}>
-            Lessons are free to browse without signing in. Your progress
-            stays on this device.
+            {t.profile.signedOutInfo}
           </Text>
         </View>
       </ScrollView>
@@ -158,8 +158,8 @@ export default function ProfileScreen() {
           {user.email}
         </Text>
         <Text style={[styles.authBadge, { color: theme.textMuted }]}>
-          Signed in with {user.auth === "google" ? "Google" : "email"}
-          {user.mfa ? " · 2FA on" : ""}
+          {t.profile.authBadge(user.auth === "google" ? "google" : "email")}
+          {user.mfa ? t.profile.authBadgeMfa : ""}
         </Text>
       </View>
 
@@ -170,7 +170,7 @@ export default function ProfileScreen() {
             {progress.streakCount}
           </Text>
           <Text style={[styles.statLabel, { color: theme.textMuted }]}>
-            day streak
+            {t.profile.statStreakLabel}
           </Text>
         </View>
         <View style={[styles.statCard, { borderColor: theme.border }]}>
@@ -179,7 +179,7 @@ export default function ProfileScreen() {
             {progress.goalMinutesPerDay}
           </Text>
           <Text style={[styles.statLabel, { color: theme.textMuted }]}>
-            min / day goal
+            {t.profile.statGoalLabel}
           </Text>
         </View>
         <View style={[styles.statCard, { borderColor: theme.border }]}>
@@ -192,33 +192,33 @@ export default function ProfileScreen() {
             {progress.completedLessonIds.length}
           </Text>
           <Text style={[styles.statLabel, { color: theme.textMuted }]}>
-            lessons done
+            {t.profile.statLessonsLabel}
           </Text>
         </View>
       </View>
 
       {progress.streakCount === 0 ? (
         <Text style={[styles.streakHint, { color: theme.textMuted }]}>
-          Complete a lesson today to start your streak.
+          {t.profile.streakHint}
         </Text>
       ) : null}
 
       <View style={styles.menu}>
         <MenuRow
           icon="map-outline"
-          label="Roadmap"
+          label={t.common.roadmap}
           onPress={() => router.push("/roadmap")}
           theme={theme}
         />
         <MenuRow
           icon="chatbubble-ellipses-outline"
-          label="AI Tutor"
+          label={t.common.aiTutor}
           onPress={() => router.push("/tutor")}
           theme={theme}
         />
         <MenuRow
           icon="settings-outline"
-          label="Settings"
+          label={t.common.settings}
           onPress={() => router.push("/settings")}
           theme={theme}
         />
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
           <>
             <Ionicons name="log-out-outline" size={20} color={theme.danger} />
             <Text style={[styles.signOutText, { color: theme.danger }]}>
-              Sign out
+              {t.common.signOut}
             </Text>
           </>
         )}

@@ -4,7 +4,7 @@
 // are grounded in the lesson video's transcript — a "Grounded in the
 // video" badge and [mm:ss] citations are shown when the response has
 // them. Signed-out users get a sign-in gate, never a faked answer.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -21,32 +21,42 @@ import { askAi, type AiMode } from "../lib/api";
 import type { AiChatMessage } from "../lib/types";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme-context";
+import { useLanguage } from "../lib/i18n";
 
-const MODES: { id: AiMode; label: string; hint: string }[] = [
-  { id: "tutor", label: "Tutor", hint: "Ask about the lesson" },
-  { id: "explain", label: "Explain", hint: "Paste code and ask what it does" },
-  { id: "debug", label: "Debug", hint: "Paste broken code and ask what is wrong" },
-  { id: "quiz", label: "Quiz", hint: "Test yourself on the lesson" },
+const MODES: { id: AiMode }[] = [
+  { id: "tutor" },
+  { id: "explain" },
+  { id: "debug" },
+  { id: "quiz" },
 ];
 
-function formatCitation(citation: string): string {
-  return citation.startsWith("[") ? citation : `[${citation}]`;
-}
 
 export default function TutorScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user, loading: authLoading } = useAuth();
   const params = useLocalSearchParams<{ lessonId?: string }>();
   const rawLessonId = params.lessonId;
   const lessonId = Array.isArray(rawLessonId) ? rawLessonId[0] : rawLessonId;
 
+  const modeLabels: Record<AiMode, string> = {
+    tutor: t.tutor.modeTutor,
+    explain: t.tutor.modeExplain,
+    debug: t.tutor.modeDebug,
+    quiz: t.tutor.modeQuiz,
+  };
+  const modeHints: Record<AiMode, string> = {
+    tutor: t.tutor.hintTutor,
+    explain: t.tutor.hintExplain,
+    debug: t.tutor.hintDebug,
+    quiz: t.tutor.hintQuiz,
+  };
+
   const [mode, setMode] = useState<AiMode>("tutor");
   const [messages, setMessages] = useState<AiChatMessage[]>([
     {
       role: "assistant",
-      text: lessonId
-        ? "Ask me anything about this lesson — I answer from the video itself."
-        : "Ask me anything about Python. Pick a mode above to explain code, debug it, or quiz yourself.",
+      text: lessonId ? t.tutor.greetingLesson : t.tutor.greetingGeneral,
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -57,9 +67,8 @@ export default function TutorScreen() {
   const listRef = useRef<FlatList<AiChatMessage>>(null);
 
   const showsCodeInput = mode === "explain" || mode === "debug";
-  const activeMode = MODES.find((m) => m.id === mode) ?? MODES[0];
 
-  const send = useCallback(async () => {
+  const send = async () => {
     const trimmedQuestion = question.trim();
     if (!trimmedQuestion || sending) return;
     const trimmedCode = showsCodeInput ? code.trim() : "";
@@ -93,16 +102,14 @@ export default function TutorScreen() {
       const status = (e as { status?: number }).status;
       if (status === 401) {
         setSessionExpired(true);
-        setError("Your session expired. Sign in again to keep chatting.");
+        setError(t.tutor.errorSessionExpired);
       } else {
-        setError(
-          "The tutor couldn't answer right now. Check your connection and try again."
-        );
+        setError(t.tutor.errorGeneric);
       }
     } finally {
       setSending(false);
     }
-  }, [question, code, showsCodeInput, mode, lessonId, sending]);
+  };
 
   // Keep the latest message visible.
   useEffect(() => {
@@ -121,18 +128,17 @@ export default function TutorScreen() {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Text style={[styles.gateTitle, { color: theme.text }]}>
-          Sign in to use the AI Tutor
+          {t.tutor.signInGateTitle}
         </Text>
         <Text style={[styles.gateText, { color: theme.textMuted }]}>
-          The tutor answers from the lesson videos, and that needs your
-          account.
+          {t.tutor.signInGateText}
         </Text>
         <Link href="/auth/signin" asChild>
           <Pressable
             style={[styles.signInButton, { borderColor: theme.border }]}
           >
             <Text style={[styles.signInText, { color: theme.text }]}>
-              Sign in
+              {t.common.signIn}
             </Text>
           </Pressable>
         </Link>
@@ -166,15 +172,16 @@ export default function TutorScreen() {
                   { color: active ? theme.text : theme.textMuted },
                 ]}
               >
-                {m.label}
+                {modeLabels[m.id]}
               </Text>
             </Pressable>
           );
         })}
       </View>
       <Text style={[styles.modeHint, { color: theme.textMuted }]}>
-        {activeMode.hint}
-        {lessonId ? ` · Lesson ${lessonId}` : ""}
+        {lessonId
+          ? t.tutor.hintLessonSuffix(modeHints[mode], lessonId)
+          : modeHints[mode]}
       </Text>
 
       <FlatList
@@ -224,7 +231,7 @@ export default function TutorScreen() {
                     <Text
                       style={[styles.groundedText, { color: theme.success }]}
                     >
-                      Grounded in the video
+                      {t.tutor.groundedBadge}
                     </Text>
                   </View>
                 ) : null}
@@ -235,7 +242,9 @@ export default function TutorScreen() {
                         key={citation}
                         style={[styles.citation, { color: theme.info }]}
                       >
-                        {formatCitation(citation)}
+                        {citation.startsWith("[")
+                          ? citation
+                          : t.tutor.citation(citation)}
                       </Text>
                     ))}
                   </View>
@@ -278,7 +287,7 @@ export default function TutorScreen() {
             <Link href="/auth/signin" asChild>
               <Pressable>
                 <Text style={[styles.errorLink, { color: theme.info }]}>
-                  Sign in again
+                  {t.tutor.signInAgain}
                 </Text>
               </Pressable>
             </Link>
@@ -293,7 +302,7 @@ export default function TutorScreen() {
           <TextInput
             value={code}
             onChangeText={setCode}
-            placeholder="Paste your code here (optional)"
+            placeholder={t.tutor.codePlaceholder}
             placeholderTextColor={theme.textMuted}
             multiline
             numberOfLines={4}
@@ -313,7 +322,7 @@ export default function TutorScreen() {
           <TextInput
             value={question}
             onChangeText={setQuestion}
-            placeholder="Ask a question…"
+            placeholder={t.tutor.askPlaceholder}
             placeholderTextColor={theme.textMuted}
             multiline
             returnKeyType="send"
@@ -339,7 +348,7 @@ export default function TutorScreen() {
               },
             ]}
           >
-            <Text style={[styles.sendText, { color: theme.text }]}>Send</Text>
+            <Text style={[styles.sendText, { color: theme.text }]}>{t.common.send}</Text>
           </Pressable>
         </View>
       </View>

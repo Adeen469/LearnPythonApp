@@ -15,17 +15,17 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "../../lib/theme-context";
+import { useLanguage } from "../../lib/i18n";
 import { useAuth } from "../../lib/auth";
 import { sendOtp, verifyOtp } from "../../lib/api";
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error
-    ? err.message
-    : "Something went wrong. Please try again.";
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export default function OtpScreen() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { refresh } = useAuth();
   const params = useLocalSearchParams();
   const email = typeof params.email === "string" ? params.email : "";
@@ -39,11 +39,11 @@ export default function OtpScreen() {
 
   async function handleVerify() {
     if (code.trim().length !== 6) {
-      setError("Enter the 6-digit code.");
+      setError(t.common.enterSixDigitCode);
       return;
     }
     if (!email) {
-      setError("No email to verify. Go back and try signing in again.");
+      setError(t.auth.noEmailToVerify);
       return;
     }
     setError(null);
@@ -54,7 +54,7 @@ export default function OtpScreen() {
       await refresh();
       router.back();
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export default function OtpScreen() {
 
   async function handleResend() {
     if (!email) {
-      setError("No email to send a code to.");
+      setError(t.auth.noEmailToSendCodeTo);
       return;
     }
     setError(null);
@@ -70,9 +70,9 @@ export default function OtpScreen() {
     setResending(true);
     try {
       await sendOtp(email, purpose);
-      setInfo(`A new code was sent to ${email}.`);
+      setInfo(t.auth.newCodeSentTo(email));
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t.common.genericError));
     } finally {
       setResending(false);
     }
@@ -87,14 +87,12 @@ export default function OtpScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.title, { color: theme.text }]}>Check your email</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.common.checkYourEmail}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          We sent a 6-digit code to{" "}
-          <Text style={{ color: theme.text }}>{email || "your email"}</Text>.
-          Enter it below to {purpose === "signup" ? "verify your account" : "sign in"}.
+          {t.auth.otpSubtitle(email, purpose)}
         </Text>
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>6-digit code</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>{t.common.sixDigitCodeLabel}</Text>
         <TextInput
           style={[
             styles.input,
@@ -104,7 +102,7 @@ export default function OtpScreen() {
               color: theme.text,
             },
           ]}
-          placeholder="123456"
+          placeholder={t.common.codePlaceholder}
           placeholderTextColor={theme.textMuted}
           value={code}
           onChangeText={(v) => setCode(v.replace(/[^0-9]/g, "").slice(0, 6))}
@@ -135,7 +133,9 @@ export default function OtpScreen() {
             <ActivityIndicator color={theme.background} />
           ) : (
             <Text style={[styles.primaryButtonText, { color: theme.background }]}>
-              Verify
+              {
+                t.auth.verify
+              }
             </Text>
           )}
         </Pressable>
@@ -149,7 +149,7 @@ export default function OtpScreen() {
             <ActivityIndicator color={theme.textMuted} size="small" />
           ) : (
             <Text style={[styles.link, { color: theme.textSecondary }]}>
-              Didn&apos;t get a code? Resend
+              {t.auth.resendCodePrompt}
             </Text>
           )}
         </Pressable>
@@ -157,7 +157,7 @@ export default function OtpScreen() {
         <View style={styles.spacer} />
         <Pressable onPress={() => router.push("/auth/signin")}>
           <Text style={[styles.link, { color: theme.textMuted, textAlign: "center" }]}>
-            Back to sign in
+            {t.common.backToSignIn}
           </Text>
         </Pressable>
       </ScrollView>
